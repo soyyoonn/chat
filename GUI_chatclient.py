@@ -65,23 +65,18 @@ class ChatClient:
     # 소켓에서 메시지를 읽어서 수신메시지 창에 표시
     def receive_message(self,so):
         while True:
-            try:
-                buf=so.recv(256)
-            except:
-                print(f'서버종료')
-
-            else:
-                if not buf: # 연결 종료
-                    break
-                self.chat_transcript_area.insert('end',buf.decode('utf-8')+'\n')
-                self.chat_transcript_area.yview(END)
+            buf = so.recv(256)
+            if not buf: # 연결 종료
+                break
+            self.chat_transcript_area.insert('end',buf.decode('utf-8')+'\n')
+            self.chat_transcript_area.yview(END)
         so.close()
 
 if __name__=='__main__':
     ip=input('server IP addr: ')
     if ip =='':
-        ip='192.168.125.10'
-    port=2500
+        ip='10.10.21.123'
+    port=5010
     ChatClient(ip,port)
     mainloop()
 

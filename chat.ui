@@ -14,87 +14,130 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="label">
+   <widget class="QStackedWidget" name="stackedWidget">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>60</y>
-      <width>91</width>
-      <height>16</height>
+      <x>-1</x>
+      <y>0</y>
+      <width>601</width>
+      <height>781</height>
      </rect>
     </property>
-    <property name="text">
-     <string>사용자이름 :</string>
+    <property name="currentIndex">
+     <number>1</number>
     </property>
-   </widget>
-   <widget class="QLineEdit" name="name_line">
-    <property name="geometry">
-     <rect>
-      <x>130</x>
-      <y>60</y>
-      <width>113</width>
-      <height>21</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_2">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>100</y>
-      <width>91</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>수신메시지:</string>
-    </property>
-   </widget>
-   <widget class="QTextEdit" name="send_line">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>600</y>
-      <width>521</width>
-      <height>111</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QTextBrowser" name="recv_bra">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>130</y>
-      <width>521</width>
-      <height>411</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_3">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>560</y>
-      <width>91</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>송신메시지:</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="send_btn">
-    <property name="geometry">
-     <rect>
-      <x>470</x>
-      <y>560</y>
-      <width>93</width>
-      <height>28</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>전송</string>
-    </property>
+    <widget class="QWidget" name="page">
+     <widget class="QLineEdit" name="name_line">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>330</y>
+        <width>113</width>
+        <height>21</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>280</y>
+        <width>121</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>닉네임을 입력하세요.</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="go_btn">
+      <property name="geometry">
+       <rect>
+        <x>250</x>
+        <y>390</y>
+        <width>75</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>채팅방 입장</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="page_2">
+     <widget class="QPushButton" name="send_btn">
+      <property name="geometry">
+       <rect>
+        <x>470</x>
+        <y>540</y>
+        <width>93</width>
+        <height>28</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>전송</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>80</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>수신메시지:</string>
+      </property>
+     </widget>
+     <widget class="QTextBrowser" name="recv_bra">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>110</y>
+        <width>521</width>
+        <height>411</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="send_line">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>580</y>
+        <width>521</width>
+        <height>111</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_3">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>540</y>
+        <width>91</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>송신메시지:</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="exit_btn">
+      <property name="geometry">
+       <rect>
+        <x>470</x>
+        <y>720</y>
+        <width>91</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>채팅방 나가기</string>
+      </property>
+     </widget>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -103,7 +146,7 @@
      <x>0</x>
      <y>0</y>
      <width>600</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

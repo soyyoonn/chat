@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.31, for Win64 (x86_64)
 --
--- Host: localhost    Database: network
+-- Host: 10.10.21.101    Database: network
 -- ------------------------------------------------------
 -- Server version	8.0.31
 
@@ -25,7 +25,9 @@ DROP TABLE IF EXISTS `chat`;
 CREATE TABLE `chat` (
   `보낸 사람` varchar(45) DEFAULT NULL,
   `보낸 메시지` varchar(45) DEFAULT NULL,
-  `시간` varchar(45) DEFAULT NULL
+  `시간` varchar(45) DEFAULT NULL,
+  `IP` varchar(45) DEFAULT NULL,
+  `PORT` varchar(45) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -47,4 +49,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-01-30 10:26:27
+-- Dump completed on 2023-01-30 16:27:51
