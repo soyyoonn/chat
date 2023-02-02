@@ -5,6 +5,7 @@ from socket import *
 from threading import *
 import pymysql
 import json
+import time
 
 
 class ChatserverMulti:
@@ -16,11 +17,11 @@ class ChatserverMulti:
         self.final_received_message = ''  # 최종 수신 메시지
         self.s_sock = socket(AF_INET, SOCK_STREAM)  # 소켓생성
         self.ip = ''
-        self.port = 9028
+        self.port = 9068
         self.s_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)  # 주소 재사용
         self.s_sock.bind((self.ip, self.port))  # 연결대기
         print('클라이언트 대기중...')
-        self.s_sock.listen(100)  # 최대 접속인원 3명
+        self.s_sock.listen(100)  # 최대 접속인원
         # accept_clinet()를 호출하여 클라이언트와 연결
         self.accept_client()
 
@@ -52,39 +53,76 @@ class ChatserverMulti:
             else:  # 예외가 발생하지 않아 except절을 실행하지 않았을 경우 실행됨.
                 self.final_received_message = incoming_message.decode()
                 print(self.final_received_message)
-                print(bool(self.final_received_message[-3:] == '006'))
-                if self.final_received_message == '001':
-                    conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
-                    c = conn.cursor()
-                    c.execute(f'SELECT send,message FROM network.chat where send not in ("알림")')
-                    self.chat_db = c.fetchall()
-                    conn.close()
-                    aa = json.dumps(self.chat_db)
-                    c_socket.send((aa + '001').encode())
+                if '+' in self.final_received_message:
+                    self.final_received_message=self.final_received_message.split('+')
 
-                elif self.final_received_message[-3:] == '003':
-                    self.send_all_client(c_socket,2)
-                    # 접속명단 확인
-                    if self.final_received_message[:-3] not in self.nickname:
-                        self.nickname.append(self.final_received_message[:-3])
-                        print(self.nickname)
+                    if self.final_received_message[0][-3:] == '004':        # 채팅방 이름
+                        self.roomname = self.final_received_message[0][:-3]
+                        self.send_all_client_chat_in(5, c_socket)
 
-                elif self.final_received_message[-3:] == '002':
-                    self.send_all_client(c_socket,1)
-                    self.db_save()
 
-                elif self.final_received_message[-3:] == '004':
-                    self.roomname=self.final_received_message[:-3]
+                    if self.final_received_message[1] == '001':                 # 채팅방 이전기록
+                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
+                        c = conn.cursor()
+                        c.execute(f'SELECT send,message,time FROM network.chat where send not in ("알림") and roomname="{self.roomname}"')
+                        self.chat_db = c.fetchall()
+                        conn.close()
+                        aa = json.dumps(self.chat_db)
+                        c_socket.send((aa + '001').encode())
 
-                elif self.final_received_message == '005':
-                    self.send_all_client_chat_in(c_socket)
+                    if self.final_received_message[2][-3:] == '011':               # 채팅방입장알림
+                        self.send_all_client_chat_in(3, c_socket)
 
-                elif self.final_received_message[-3:] == '006':
-                    self.send_all_client(c_socket,5)
+                    if self.final_received_message[1][-3:] == '002':               # 메시지 수신
+                        self.db_save()
+                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
+                        c = conn.cursor()
+                        c.execute(f'SELECT send,message,time FROM network.chat where roomname="{self.roomname}" order by time desc limit 1')
+                        self.chat_db = c.fetchall()
+                        conn.close()
+                        print(self.chat_db)
+                        self.send_all_client_chat_in(4, c_socket)
 
+                else:
+                    if self.final_received_message == '010':                    # 닉네임리스트 보내기
+                            check_message = json.dumps(self.nickname)
+                            c_socket.send((check_message +'010').encode())
+
+                    if self.final_received_message[-3:] == '003':             # 닉네임 저장
+                        if self.final_received_message[:-3] not in self.nickname:
+                            self.nickname.append(self.final_received_message[:-3])
+
+                    if self.final_received_message == '009':                  # 채팅방 목록
+                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
+                        c = conn.cursor()
+                        c.execute(f'SELECT roomname FROM network.room')
+                        self.room_db = c.fetchall()
+                        conn.close()
+                        self.send_all_client_chat_in(2, c_socket)
+
+                    elif self.final_received_message[-3:] == '006':
+                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
+                        c = conn.cursor()
+                        c.execute(f"insert into `network`.`room` (roomname) values ('{self.final_received_message[:-3]}')")
+                        conn.commit()
+                        c.execute(f'SELECT roomname FROM network.room')
+                        self.room_db = c.fetchall()
+                        conn.close()
+                        self.send_all_client_chat_in(2, c_socket)
+
+                    elif self.final_received_message == '005':
+                        self.send_all_client_chat_in(0, c_socket)
+
+                    elif self.final_received_message[-3:] == '007':
+                        if self.final_received_message[:-3] in self.nickname:
+                            self.nickname.remove(self.final_received_message[:-3])
+                            self.send_all_client_chat_in(0, c_socket)
+                        else:
+                            pass
 
     def db_save(self):
-        a = self.final_received_message[:-3].split(':')
+        a = self.final_received_message[1][:-3].split(':')
+        print(a)
         conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
         c = conn.cursor()
         c.execute(
@@ -95,7 +133,7 @@ class ChatserverMulti:
 
     # 모든 클라이언트에게 메시지 전송
     def send_all_client(self, sender_socket, num):
-        check=['001','002','003','004','005','006']
+        check=['001','002','003','004']
         for client in self.clients:  # 목록에 있는 모든 소켓에 대해
             socket, (ip, port) = client
             try:
@@ -105,13 +143,39 @@ class ChatserverMulti:
             except:
                 self.clients.remove(client)
 
-   # 현재 접속 인원 전체 클라이언트에게 보내기
-    def send_all_client_chat_in(self, sender_socket):
+    # 현재 접속 인원 전체 클라이언트에게 보내기
+    # check : 011 : 채팅방입장알림
+    def send_all_client_chat_in(self,num,sender_socket):
+        check=['005','006','009','011','002','004']
         for client in self.clients:  # 목록에 있는 모든 소켓에 대해
             socket, (ip, port) = client
             try:
-                message = json.dumps(self.nickname)
-                socket.sendall((message +'005').encode())
+                if num == 0:
+                    message = json.dumps(self.nickname)
+                    socket.sendall((message + check[num]).encode())
+                # elif num == 1:
+                #     message = json.dumps()
+                #     socket.sendall((message + check[num]).encode())
+                elif num == 2:
+                    message = json.dumps(self.room_db)
+                    socket.sendall((message + check[num]).encode())
+
+                elif num == 3:
+                    message = json.dumps(self.final_received_message[2][:-3])
+                    socket.sendall((message + check[num]).encode())
+
+                elif num == 4:
+                    roomname = json.dumps(self.roomname)
+                    socket.sendall((roomname+'004').encode())
+                    message = json.dumps(self.chat_db)
+                    socket.sendall((message+check[num]).encode())
+                    print(self.roomname+'004')
+                    print(message+check[num])
+
+                elif num == 5:
+                    roomname = json.dumps(self.roomname)
+                    socket.sendall((roomname + '004').encode())
+
             except:
                 self.clients.remove(client)
 
