@@ -62,6 +62,7 @@ class WindowClass(QMainWindow, form_class) :
     # 채팅창에서 채팅리스트 창으로 이동
     def list_page(self):
         self.chatroom.clear()
+        self.client_socket.send((self.username + '007').encode())                   # 007 : 닉네임리스트에서 닉네임삭제
         self.client_socket.send('009'.encode())                                     # 009 : 채팅방 리스트
         self.stackedWidget.setCurrentIndex(1)                                       # 채팅방 리스트 창으로 이동
 

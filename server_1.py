@@ -154,45 +154,41 @@ class ChatserverMulti:
         check=['000','001','002','003','004','005','006','007','008','009','010','011','012']
         for client in self.clients:  # 목록에 있는 모든 소켓에 대해
             socket, (ip, port) = client
-            try:
-                # 채팅방 리스트 (새로운 채팅방 만들었을 때)
-                if num == 9:
-                    message = json.dumps(self.room_db)
-                    socket.sendall((message + check[num]).encode())
+            # 채팅방 리스트 (새로운 채팅방 만들었을 때)
+            if num == 9:
+                message = json.dumps(self.room_db)
+                socket.sendall((message + check[num]).encode())
 
-                # 현재 접속자 명단
-                if num == 5:
-                    message = json.dumps(self.nickname)
-                    socket.sendall((message + check[num]).encode())
+            # 현재 접속자 명단
+            if num == 5:
+                message = json.dumps(self.nickname)
+                socket.sendall((message + check[num]).encode())
 
-                # 채팅방입장시(채팅방이름)
-                if num == 4:
-                    roomname = json.dumps(self.roomname)
-                    socket.sendall((roomname+'004').encode())
+            # 채팅방입장시(채팅방이름)
+            if num == 4:
+                roomname = json.dumps(self.roomname)
+                socket.sendall((roomname+'004').encode())
 
-                # 채팅방알림(닉네임)
-                if num == 11:
-                    message = json.dumps(self.final_received_message[2][:-3])
-                    socket.sendall((message + check[num]).encode())
+            # 채팅방알림(닉네임)
+            if num == 11:
+                message = json.dumps(self.final_received_message[2][:-3])
+                socket.sendall((message + check[num]).encode())
 
-                # 메시지전송시(채팅방이름)
-                if num == 12:
-                    roomname = json.dumps(self.m_roomname)
-                    socket.sendall((roomname+check[num]).encode())
+            # 메시지전송시(채팅방이름)
+            if num == 12:
+                roomname = json.dumps(self.m_roomname)
+                socket.sendall((roomname+check[num]).encode())
 
-                # 닉네임리스트에서 닉네임삭제
-                if num == 7:
-                    message = json.dumps(self.final_received_message[:-3])
-                    self.message_end = message + check[num]
-                    socket.sendall(self.message_end.encode())
+            # 닉네임리스트에서 닉네임삭제
+            if num == 7:
+                message = json.dumps(self.final_received_message[:-3])
+                self.message_end = message + check[num]
+                socket.sendall(self.message_end.encode())
 
-                # 닉네임, 송신메시지
-                if num == 2:
-                    message = json.dumps(self.m_chat_db)
-                    socket.sendall((message+check[num]).encode())
-
-            except:
-                self.clients.remove(client)
+            # 닉네임, 송신메시지
+            if num == 2:
+                message = json.dumps(self.m_chat_db)
+                socket.sendall((message+check[num]).encode())
 
 if __name__ == '__main__':
     ChatserverMulti()
