@@ -5,8 +5,6 @@ from socket import *
 from threading import *
 import pymysql
 import json
-import time
-
 
 class ChatserverMulti:
 
@@ -17,7 +15,7 @@ class ChatserverMulti:
         self.final_received_message = ''  # 최종 수신 메시지
         self.s_sock = socket(AF_INET, SOCK_STREAM)  # 소켓생성
         self.ip = ''
-        self.port = 9068
+        self.port = 9028
         self.s_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)  # 주소 재사용
         self.s_sock.bind((self.ip, self.port))  # 연결대기
         print('클라이언트 대기중...')
@@ -57,10 +55,15 @@ class ChatserverMulti:
                 if '+' in self.final_received_message:
                     self.final_received_message=self.final_received_message.split('+')
 
-                    # 채팅방 이름
+                    # 메시지전송시(채팅방이름)
+                    if self.final_received_message[0][-3:] == '012':
+                        self.m_roomname = self.final_received_message[0][:-3]
+                        self.send_all_client(12)
+
+                    # 채팅방입장시(채팅방이름)
                     if self.final_received_message[0][-3:] == '004':
                         self.roomname = self.final_received_message[0][:-3]
-                        self.send_all_client(c_socket,4)
+                        self.send_all_client(4)
 
                     # 이전 채팅
                     if self.final_received_message[1] == '001':
@@ -74,7 +77,7 @@ class ChatserverMulti:
 
                     # 채팅방알림(닉네임)
                     if self.final_received_message[2][-3:] == '011':               # 채팅방입장알림
-                        self.send_all_client(c_socket,11)
+                        self.send_all_client(11)
 
                     # 닉네임, 송신메시지
                     if self.final_received_message[1][-3:] == '002':               # 메시지 수신
@@ -82,9 +85,12 @@ class ChatserverMulti:
                         conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
                         c = conn.cursor()
                         c.execute(f'SELECT send,message,time FROM network.chat where roomname="{self.roomname}" order by time desc limit 1')
-                        self.chat_db = c.fetchall()
+                        self.m_chat_db = c.fetchall()
                         conn.close()
-                        self.send_all_client(c_socket,2)
+                        self.send_all_client(2)
+
+                    else:
+                        pass
 
                 else:
                     # 클라이언트로 접속 닉네임 리스트 보내기
@@ -100,10 +106,10 @@ class ChatserverMulti:
                     if self.final_received_message == '009':
                         conn = pymysql.connect(host='10.10.21.101', port=3306, user='chatt', password='0000', db='network')
                         c = conn.cursor()
-                        c.execute(f'SELECT `roomname` FROM `network`.`room`')
+                        c.execute(f'SELECT roomname FROM `network`.`room`')
                         self.room_db = c.fetchall()
                         conn.close()
-                        self.send_all_client(c_socket,9)
+                        self.send_all_client(9)
 
                     # 새로운 채팅방 -> 클라이언트 전송은 채팅방리스트
                     if self.final_received_message[-3:] == '006':
@@ -111,22 +117,26 @@ class ChatserverMulti:
                         c = conn.cursor()
                         c.execute(f"insert into `network`.`room` (roomname) values ('{self.final_received_message[:-3]}')")
                         conn.commit()
-                        c.execute(f'SELECT `roomname` FROM `network`.`room`')
+                        c.execute(f'SELECT roomname FROM `network`.`room`')
                         self.room_db = c.fetchall()
                         conn.close()
-                        self.send_all_client(c_socket,9)        # 채팅방 리스트
+                        self.send_all_client(9)        # 채팅방 리스트
 
                     # 현재 접속자 명단
                     if self.final_received_message == '005':
-                        self.send_all_client(c_socket,5)
+                        self.send_all_client(5)
 
                     # 닉네임리스트에서 닉네임삭제
                     if self.final_received_message[-3:] == '007':
                         if self.final_received_message[:-3] in self.nickname:
                             self.nickname.remove(self.final_received_message[:-3])
-                            self.send_all_client(c_socket, 7)
+                            self.send_all_client(7)
                         else:
                             pass
+
+                    else:
+                        pass
+
     # 채팅내역 DB저장
     def db_save(self):
         a = self.final_received_message[1][:-3].split(':')
@@ -139,9 +149,9 @@ class ChatserverMulti:
         conn.close()
 
     # 모든 클라이언트에게 메시지 전송
-    # check : 002:닉네임, 송신메시지 / 004:채팅방이름 / 005:현재접속자명단/ 007:닉네임리스트에서 닉네임삭제 / 009:채팅방리스트 / 011:채팅방알림(닉네임)
-    def send_all_client(self, sender_socket, num):
-        check=['000','001','002','003','004','005','006','007','008','009','010','011']
+    # check : 012:메시지전송시(채팅방이름) / 002:닉네임:송신메시지 / 004:채팅방입장시(채팅방이름) / 005:현재접속자명단/ 007:닉네임리스트에서 닉네임삭제 / 009:채팅방리스트 / 011:채팅방알림(닉네임)
+    def send_all_client(self, num):
+        check=['000','001','002','003','004','005','006','007','008','009','010','011','012']
         for client in self.clients:  # 목록에 있는 모든 소켓에 대해
             socket, (ip, port) = client
             try:
@@ -155,17 +165,20 @@ class ChatserverMulti:
                     message = json.dumps(self.nickname)
                     socket.sendall((message + check[num]).encode())
 
-                # 채팅방 이름
+                # 채팅방입장시(채팅방이름)
                 if num == 4:
                     roomname = json.dumps(self.roomname)
                     socket.sendall((roomname+'004').encode())
-                    message = json.dumps(self.chat_db)
-                    socket.sendall((message+check[num]).encode())
 
                 # 채팅방알림(닉네임)
                 if num == 11:
                     message = json.dumps(self.final_received_message[2][:-3])
                     socket.sendall((message + check[num]).encode())
+
+                # 메시지전송시(채팅방이름)
+                if num == 12:
+                    roomname = json.dumps(self.m_roomname)
+                    socket.sendall((roomname+check[num]).encode())
 
                 # 닉네임리스트에서 닉네임삭제
                 if num == 7:
@@ -175,12 +188,9 @@ class ChatserverMulti:
 
                 # 닉네임, 송신메시지
                 if num == 2:
-                    roomname = json.dumps(self.roomname)
-                    socket.sendall((roomname+'004').encode())
-                    print(roomname+'004')
-                    message = json.dumps(self.chat_db)
+                    message = json.dumps(self.m_chat_db)
                     socket.sendall((message+check[num]).encode())
-                    print(message+check[num])
+
             except:
                 self.clients.remove(client)
 
