@@ -73,17 +73,17 @@ class WindowClass(QMainWindow, form_class) :
         self.client_socket.send((f'{self.item.text()}004+001+{self.username.text()}011').encode())
         self.receivemessage.scrollToBottom()
 
-    # # 종료시 현재접속자에서 삭제
-    # def closeEvent(self, event):
-    #     quit_msg = "종료하시겠습니까?"
-    #     reply = QMessageBox.question(self, '종료', quit_msg, QMessageBox.Yes, QMessageBox.No)
-    #
-    #     if reply == QMessageBox.Yes:
-    #         self.client_socket.send((self.name_line.text() + '007').encode())  # 007 : 현재접속자 삭제
-    #         event.accept()
-    #     else:
-    #         event.ignore()
-    #
+    # 종료시 현재접속자에서 삭제
+    def closeEvent(self, event):
+        quit_msg = "종료하시겠습니까?"
+        reply = QMessageBox.question(self, '종료', quit_msg, QMessageBox.Yes, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            self.client_socket.send((self.username.text() + '007').encode())  # 007 : 현재접속자 삭제
+            event.accept()
+        else:
+            event.ignore()
+
     def newroom_chat(self):
         self.client_socket.send((self.newchatname.text()+'006').encode()) # 006 : 새로운 채팅방
         self.newchatname.clear()
