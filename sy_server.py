@@ -10,7 +10,7 @@ class MultiChatServer:
     # 소켓을 생성하고 연결되면 accept_client() 호출
     def __init__(self):
         self.clients = []   # 접속된 클라이언트 소켓 목록을 넣을 리스트
-        self.userlist = []
+        self.userlist = []   # 접속자 넣을 리스트
         self.final_received_message = ""  # 최종 수신 메시지
         self.s_sock = socket(AF_INET, SOCK_STREAM)  # 서버 소켓 생성
         self.ip ='10.10.21.101'
@@ -39,30 +39,32 @@ class MultiChatServer:
     def receive_messages(self, c_socket):
         while True:
             try:
-                incoming_message = c_socket.recv(1024)
+                incoming_message = c_socket.recv(9999)
                 if not incoming_message:  # 연결이 종료됨
                     break
             except:
                 continue
+
             else:  # 예외가 발생하지 않아 except 실행되지 않을시 실행
                 self.final_received_message = incoming_message.decode('utf-8')  # 클라이언트 소켓에서 받아 온 메시지
                 print(self.final_received_message)
                 # ---------------------------------------------------------------------------
                 if self.final_received_message[-3:] == '001':  # 받은 메시지 마지막 3글자가 001일때
                     now = datetime.now()
-                    now_time = now.strftime('%Y-%m-%d %H:%M:%S')
-                    print(now_time)
+                    self.now_time = now.strftime('%Y-%m-%d %H:%M:%S')
                     self.m = self.final_received_message.split(':')
-                    print(self.m, '뭐가문제')
+                    print(self.m)
                     conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000', db='network')
                     cursor = conn.cursor()
                     # DB에 데이터 저장
                     cursor.execute(
-                        f"INSERT INTO chat (send, message, time, IP, PORT, roomname) VALUES('{self.m[0]}','{self.m[1]}', '{now_time}','{self.add[0]}','{self.add[1]}','{self.m[2]}')")
+                        f"INSERT INTO chat (send, message, time, IP, PORT, roomname) VALUES('{self.m[0]}','{self.m[1]}', '{self.now_time}','{self.add[0]}','{self.add[1]}','{self.m[2]}')")
                     conn.commit()
+                    conn.close()
+
                 elif self.final_received_message[-3:] == '005':
                     user = self.final_received_message.split(':')[0]
-                    print(user, 'hhhjknm')
+                    print(user)
                     self.userlist.append(user)
                     print(self.userlist)
 
@@ -74,79 +76,67 @@ class MultiChatServer:
         for client in self.clients:  # 목록에 있는 모든 소켓에 대해
             socket, (ip, port) = client
 
-            if self.final_received_message[-3:] == '005':
-                chatuser = json.dumps(self.userlist)
-                print(chatuser)
-                senders_socket.sendall((chatuser + '005').encode('utf-8'))  # 클라이언트에 메시지 전송
+            # if socket is not senders_socket:  # 송신 클라이언트는 제외
+            try:
+                if self.final_received_message[-5:] == '입장001':
+                    self.in_msg = (self.now_time + "\n/" + self.final_received_message.split(':')[0] + '/' +
+                                self.final_received_message.split(':')[1] + '/' +
+                                self.final_received_message.split(':')[2] + '/')
+                    print(self.in_msg)
+                    socket.sendall((self.in_msg + '입장001').encode('utf-8'))  # 메시지 전송
 
-            else:
-                if socket is not senders_socket:  # 송신 클라이언트는 제외
-                    try:
-                        if self.final_received_message[-3:] == '001':  # 받은 메시지 마지막 3글자가 001일때 메시지 전송
-                            self.msg = (self.final_received_message.split(':')[0] + ':' + self.final_received_message.split(':')[1] + ':')
-                            print(self.msg, 'hhhjknm')
-                            socket.sendall((self.msg + '001').encode('utf-8'))  # 메시지 전송
-                            # socket.sendall((self.final_received_message).encode('utf-8')) # 메시지 전송
-                    except:  # 연결 종료
-                        self.clients.remove(client)   # 소켓 제거
-                        print(f"{ip}, {port} 연결이 종료되었습니다")
-                else:
-                    if self.final_received_message[-3:] == '002':  # 받은 메시지 마지막 3글자가 002 일때 채팅방 목록 불러오기
-                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000', db='network')
-                        cursor = conn.cursor()
-                        # DB에 저장된 채팅방 목록 데이터 불러오기
-                        cursor.execute(f"SELECT roomname FROM room")
-                        self.chatroom = cursor.fetchall()
-                        print(self.chatroom)
-                        conn.close()
-                        chatroom = json.dumps(self.chatroom)
-                        print(chatroom)
-                        senders_socket.sendall((chatroom + '002').encode('utf-8')) # 클라이언트에 전송
+                elif self.final_received_message[-3:] == '001':  # 받은 메시지 마지막 3글자가 001일때 메시지 전송
+                    self.msg = (self.now_time + "\n/" + self.final_received_message.split(':')[0] + '/' + self.final_received_message.split(':')[1] + '/' + self.final_received_message.split(':')[2] + '/')
+                    socket.sendall((self.msg + '001').encode('utf-8'))  # 메시지 전송
 
-                    elif self.final_received_message[-3:] == '003':  # 받은 메시지 마지막 3글자가 003 일때 메시지 불러오기
-                        room = self.final_received_message.split(':')[0]
-                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000', db='network')
-                        cursor = conn.cursor()
-                        # DB에서 채팅방 이름이 같은 메시지 데이터 불러오기
-                        cursor.execute(
-                            f"SELECT send, message FROM chat WHERE roomname = '{room}'")
-                        self.chattext = cursor.fetchall()
-                        print(self.chattext)
-                        conn.close()
-                        chattext = json.dumps(self.chattext)
-                        print(chattext)
-                        senders_socket.sendall((chattext + '003').encode('utf-8'))  # 클라이언트에 메시지 전송
+                elif self.final_received_message[-3:] == '002':  # 받은 메시지 마지막 3글자가 002 일때 채팅방 목록 불러오기
+                    conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000',
+                                           db='network')
+                    cursor = conn.cursor()
+                    # DB에 저장된 채팅방 목록 데이터 불러오기
+                    cursor.execute(f"SELECT roomname FROM room")
+                    self.chatroom = cursor.fetchall()
+                    print(self.chatroom)
+                    conn.close()
+                    chatroom = json.dumps(self.chatroom)
+                    print(chatroom)
+                    senders_socket.sendall((chatroom + '002').encode('utf-8'))  # 클라이언트에 전송
 
-                    elif self.final_received_message[-3:] == '004':  # 받은 메시지 마지막 3글자가 004 일때 채팅방 생성
-                        room = self.final_received_message.split(':')[0]
-                        conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000', db='network')
-                        cursor = conn.cursor()
-                        # 생성된 채팅방 DB에 저장
-                        cursor.execute(
-                            f"INSERT INTO room (roomname) VALUES('{room}')")
-                        conn.commit()
-                        conn.close()
-                        senders_socket.sendall((room + '004').encode('utf-8'))  # 클라이언트에 전송
+                elif self.final_received_message[-3:] == '003':  # 받은 메시지 마지막 3글자가 003 일때 이전내역 불러오기
+                    self.room = self.final_received_message.split(':')[0]
+                    conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000',
+                                           db='network')
+                    cursor = conn.cursor()
+                    # DB에서 채팅방 이름이 같은 메시지 데이터 불러오기
+                    cursor.execute(
+                        f"SELECT time, send, message FROM chat WHERE roomname = '{self.room}'")
+                    self.chattext = cursor.fetchall()
+                    print(self.chattext)
+                    conn.close()
+                    chattext = json.dumps(self.chattext)
+                    print(chattext)
+                    senders_socket.sendall((chattext + '003').encode('utf-8'))  # 클라이언트에 메시지 전송
 
-                # elif self.final_received_message[-3:] == '005':
-                #     user = self.final_received_message.split(':')[0]
-                #     print(user, 'hhhjknm')
-                #     chatuser = json.dumps(user)  # json 사용해서 리스트로 변환
-                #     print(chatuser)
-                #     senders_socket.sendall((chatuser + '005').encode('utf-8'))  # 클라이언트에 메시지 전송
+                elif self.final_received_message[-3:] == '004':  # 받은 메시지 마지막 3글자가 004 일때 채팅방 생성
+                    room = self.final_received_message.split(':')[0]
+                    conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000',
+                                           db='network')
+                    cursor = conn.cursor()
+                    # 생성된 채팅방 DB에 저장
+                    cursor.execute(
+                        f"INSERT INTO room (roomname) VALUES('{room}')")
+                    conn.commit()
+                    conn.close()
+                    senders_socket.sendall((room + '004').encode('utf-8'))  # 클라이언트에 전송
 
-                    # user = self.final_received_message.split(':')[0]
-                    # conn = pymysql.connect(host='10.10.21.101', port=3306, user='chat', password='0000', db='network')
-                    # cursor = conn.cursor()
-                    # # DB에서 사용자 이름이 같은 메시지 데이터 불러오기
-                    # cursor.execute(
-                    #     f"SELECT send FROM chat WHERE send = '{user}'")
-                    # self.chatuser = cursor.fetchall()
-                    # print(self.chatuser)
-                    # conn.close()
-                    # chatuser = json.dumps(self.chatuser)  # json 사용해서 리스트로 변환
-                    # print(chatuser)
-                    # senders_socket.sendall((chatuser + '005').encode('utf-8'))  # 클라이언트에 메시지 전송
+                elif self.final_received_message[-3:] == '005':
+                    chatuser = json.dumps(self.userlist)
+                    print(chatuser)
+                    socket.sendall((chatuser + '005').encode('utf-8'))  # 클라이언트에 메시지 전송
+
+            except:  # 연결 종료
+                self.clients.remove(client)   # 소켓 제거
+                print(f"{ip}, {port} 연결이 종료되었습니다")
 
 if __name__ == "__main__":
     MultiChatServer()
